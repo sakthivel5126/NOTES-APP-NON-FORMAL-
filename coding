@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'firebase_options.dart';
+import 'firebase_options.dart'; 
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,12 +17,32 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Student CRUD App',
-      theme: ThemeData(primarySwatch: Colors.blue),
+      debugShowCheckedModeBanner: false,
+      title: 'Notes App',
+      theme: ThemeData(
+        primarySwatch: Colors.teal,
+        brightness: Brightness.light,
+        scaffoldBackgroundColor: const Color(0xFFFDF7F7),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.teal,
+          foregroundColor: Colors.white,
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.teal,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+      ),
       home: const HomePage(),
     );
   }
 }
+
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -30,29 +50,45 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Student App")),
+      appBar: AppBar(title: const Text("Notes App")),
       body: Center(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
+            const Text(
+              "Name: Sakthivel V",
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              "Roll Number: 24CSR254",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 30),
             ElevatedButton(
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const StudentFormPage()),
+                  MaterialPageRoute(builder: (context) => const AddNotesPage()),
                 );
               },
-              child: const Text("Manage Students"),
+              child: const Text("Add Notes"),
             ),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const StudentListPage()),
+                  MaterialPageRoute(builder: (context) => const ViewNotesPage()),
                 );
               },
-              child: const Text("View Students"),
+              child: const Text("View Notes"),
             ),
           ],
         ),
@@ -61,224 +97,229 @@ class HomePage extends StatelessWidget {
   }
 }
 
-class StudentFormPage extends StatefulWidget {
-  const StudentFormPage({super.key});
+
+class AddNotesPage extends StatefulWidget {
+  const AddNotesPage({super.key});
 
   @override
-  State<StudentFormPage> createState() => _StudentFormPageState();
+  State<AddNotesPage> createState() => _AddNotesPageState();
 }
 
-class _StudentFormPageState extends State<StudentFormPage> {
-  final _formKey = GlobalKey<FormState>();
-  final _name = TextEditingController();
-  final _roll = TextEditingController();
-  final _email = TextEditingController();
-  final _dept = TextEditingController();
+class _AddNotesPageState extends State<AddNotesPage> {
+  final TextEditingController titleController = TextEditingController();
+  final TextEditingController contentController = TextEditingController();
 
-  String? _editingDocId;
-
-  
-  Future<void> _insert() async {
-    if (!_formKey.currentState!.validate()) return;
-    await FirebaseFirestore.instance.collection('students').add({
-      'name': _name.text.trim(),
-      'roll': _roll.text.trim(),
-      'email': _email.text.trim(),
-      'department': _dept.text.trim(),
-      'createdAt': FieldValue.serverTimestamp(),
-    });
-    _show("Inserted");
-    _clear();
-  }
-
- 
-  Future<void> _update() async {
-    if (_editingDocId == null) {
-      _show("Select a student from list first");
-      return;
+  Future<void> addNote() async {
+    if (titleController.text.isNotEmpty && contentController.text.isNotEmpty) {
+      await FirebaseFirestore.instance.collection('notes').add({
+        'title': titleController.text,
+        'content': contentController.text,
+        'createdAt': Timestamp.now(),
+      });
+      titleController.clear();
+      contentController.clear();
     }
-    await FirebaseFirestore.instance
-        .collection('students')
-        .doc(_editingDocId)
-        .update({
-      'name': _name.text.trim(),
-      'roll': _roll.text.trim(),
-      'email': _email.text.trim(),
-      'department': _dept.text.trim(),
-    });
-    _show("Updated");
-    _clear();
-  }
-
-  
-  Future<void> _delete() async {
-    if (_editingDocId == null) {
-      _show("Select a student from list first");
-      return;
-    }
-    await FirebaseFirestore.instance
-        .collection('students')
-        .doc(_editingDocId)
-        .delete();
-    _show("Deleted");
-    _clear();
-  }
-
-  void _clear() {
-    _formKey.currentState?.reset();
-    _name.clear();
-    _roll.clear();
-    _email.clear();
-    _dept.clear();
-    setState(() => _editingDocId = null);
-  }
-
-  void _show(String m) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
-
-  void _loadStudent(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-    _name.text = data['name'] ?? '';
-    _roll.text = data['roll'] ?? '';
-    _email.text = data['email'] ?? '';
-    _dept.text = data['department'] ?? '';
-    setState(() => _editingDocId = doc.id);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Student Form')),
+      appBar: AppBar(title: const Text("Add Notes")),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              TextField(
+                controller: titleController,
+                decoration: const InputDecoration(labelText: "Title"),
+              ),
+              TextField(
+                controller: contentController,
+                decoration: const InputDecoration(labelText: "Content"),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: addNote,
+                child: const Text("Save Note"),
+              ),
+              const SizedBox(height: 20),
+              StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('notes')
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) return const SizedBox();
+                  final totalNotes = snapshot.data!.docs.length;
+                  return Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      "Total Notes: $totalNotes",
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 10),
+              Expanded(
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('notes')
+                      .orderBy('createdAt', descending: true)
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    final docs = snapshot.data!.docs;
+                    return ListView.builder(
+                      itemCount: docs.length,
+                      itemBuilder: (context, index) {
+                        final data = docs[index].data() as Map<String, dynamic>;
+                        return Card(
+                          child: ListTile(
+                            title: Text(data['title'] ?? '—'),
+                            subtitle: Text(data['content'] ?? ''),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+class ViewNotesPage extends StatefulWidget {
+  const ViewNotesPage({super.key});
+
+  @override
+  State<ViewNotesPage> createState() => _ViewNotesPageState();
+}
+
+class _ViewNotesPageState extends State<ViewNotesPage> {
+  String? _selectedDocId;
+  String? _selectedTitle;
+  String? _selectedContent;
+
+  Future<void> _deleteNote() async {
+    if (_selectedDocId == null) return;
+    await FirebaseFirestore.instance.collection('notes').doc(_selectedDocId).delete();
+    setState(() {
+      _selectedDocId = null;
+      _selectedTitle = null;
+      _selectedContent = null;
+    });
+  }
+
+  void _updateNote() {
+    if (_selectedDocId == null) return;
+
+    final titleController = TextEditingController(text: _selectedTitle);
+    final contentController = TextEditingController(text: _selectedContent);
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Update Note"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: titleController),
+            TextField(controller: contentController),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              await FirebaseFirestore.instance.collection('notes').doc(_selectedDocId).update({
+                'title': titleController.text,
+                'content': contentController.text,
+              });
+              Navigator.pop(context);
+              setState(() {
+                _selectedTitle = titleController.text;
+                _selectedContent = contentController.text;
+              });
+            },
+            child: const Text("Update"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("View Notes")),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  TextFormField(
-                    controller: _name,
-                    decoration: const InputDecoration(labelText: 'Name'),
-                    validator: (v) =>
-                    v == null || v.trim().isEmpty ? 'Enter name' : null,
-                  ),
-                  TextFormField(
-                    controller: _roll,
-                    decoration: const InputDecoration(labelText: 'Roll Number'),
-                    validator: (v) => v == null || v.trim().isEmpty
-                        ? 'Enter roll number'
-                        : null,
-                  ),
-                  TextFormField(
-                    controller: _email,
-                    decoration: const InputDecoration(labelText: 'Email'),
-                  ),
-                  TextFormField(
-                    controller: _dept,
-                    decoration: const InputDecoration(labelText: 'Department'),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      ElevatedButton(
-                          onPressed: _insert, child: const Text("Insert")),
-                      ElevatedButton(
-                          onPressed: _update, child: const Text("Update")),
-                      ElevatedButton(
-                          onPressed: _delete, child: const Text("Delete")),
-                      ElevatedButton(
-                          onPressed: _clear, child: const Text("Clear")),
-                    ],
-                  )
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Tap a student below to edit:',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
-                    .collection('students')
+                    .collection('notes')
                     .orderBy('createdAt', descending: true)
                     .snapshots(),
                 builder: (context, snapshot) {
-                  if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}'));
-                  }
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
+                  if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
                   final docs = snapshot.data!.docs;
-                  if (docs.isEmpty) {
-                    return const Center(child: Text('No students yet'));
-                  }
+                  if (docs.isEmpty) return const Center(child: Text("No notes yet."));
+
                   return ListView.builder(
                     itemCount: docs.length,
-                    itemBuilder: (context, i) {
-                      final data =
-                      docs[i].data() as Map<String, dynamic>;
-                      return ListTile(
-                        title: Text(data['name'] ?? '—'),
-                        subtitle: Text(
-                            '${data['roll'] ?? ''} • ${data['department'] ?? ''}'),
-                        trailing: Text(data['email'] ?? ''),
-                        onTap: () => _loadStudent(docs[i]),
+                    itemBuilder: (context, index) {
+                      final data = docs[index].data() as Map<String, dynamic>;
+                      return Card(
+                        color: _selectedDocId == docs[index].id ? Colors.teal.shade100 : null,
+                        child: ListTile(
+                          title: Text(data['title'] ?? '—'),
+                          subtitle: Text(data['content'] ?? ''),
+                          onTap: () {
+                            setState(() {
+                              _selectedDocId = docs[index].id;
+                              _selectedTitle = data['title'];
+                              _selectedContent = data['content'];
+                            });
+                          },
+                        ),
                       );
                     },
                   );
                 },
               ),
             ),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: _selectedDocId == null ? null : _updateNote,
+              child: const Text("Update Note"),
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: _selectedDocId == null ? null : _deleteNote,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text("Delete Note"),
+            ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class StudentListPage extends StatelessWidget {
-  const StudentListPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("All Students")),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('students')
-            .orderBy('createdAt', descending: true)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final docs = snapshot.data!.docs;
-          if (docs.isEmpty) {
-            return const Center(child: Text('No students yet'));
-          }
-          return ListView.builder(
-            itemCount: docs.length,
-            itemBuilder: (context, i) {
-              final data = docs[i].data() as Map<String, dynamic>;
-              return ListTile(
-                title: Text(data['name'] ?? '—'),
-                subtitle:
-                Text('${data['roll'] ?? ''} • ${data['department'] ?? ''}'),
-                trailing: Text(data['email'] ?? ''),
-              );
-            },
-          );
-        },
       ),
     );
   }
