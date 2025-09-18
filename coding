@@ -75,9 +75,9 @@ class _StudentFormPageState extends State<StudentFormPage> {
   final _email = TextEditingController();
   final _dept = TextEditingController();
 
-  String? _editingDocId; // store docId for update/delete
+  String? _editingDocId;
 
-  /// INSERT
+  
   Future<void> _insert() async {
     if (!_formKey.currentState!.validate()) return;
     await FirebaseFirestore.instance.collection('students').add({
@@ -91,7 +91,7 @@ class _StudentFormPageState extends State<StudentFormPage> {
     _clear();
   }
 
-  /// UPDATE (using docId)
+ 
   Future<void> _update() async {
     if (_editingDocId == null) {
       _show("Select a student from list first");
@@ -110,7 +110,7 @@ class _StudentFormPageState extends State<StudentFormPage> {
     _clear();
   }
 
-  /// DELETE (using docId)
+  
   Future<void> _delete() async {
     if (_editingDocId == null) {
       _show("Select a student from list first");
