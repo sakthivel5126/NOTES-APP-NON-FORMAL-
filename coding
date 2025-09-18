@@ -1,0 +1,285 @@
+import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'firebase_options.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Student CRUD App',
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: const HomePage(),
+    );
+  }
+}
+
+class HomePage extends StatelessWidget {
+  const HomePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("Student App")),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const StudentFormPage()),
+                );
+              },
+              child: const Text("Manage Students"),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const StudentListPage()),
+                );
+              },
+              child: const Text("View Students"),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class StudentFormPage extends StatefulWidget {
+  const StudentFormPage({super.key});
+
+  @override
+  State<StudentFormPage> createState() => _StudentFormPageState();
+}
+
+class _StudentFormPageState extends State<StudentFormPage> {
+  final _formKey = GlobalKey<FormState>();
+  final _name = TextEditingController();
+  final _roll = TextEditingController();
+  final _email = TextEditingController();
+  final _dept = TextEditingController();
+
+  String? _editingDocId; // store docId for update/delete
+
+  /// INSERT
+  Future<void> _insert() async {
+    if (!_formKey.currentState!.validate()) return;
+    await FirebaseFirestore.instance.collection('students').add({
+      'name': _name.text.trim(),
+      'roll': _roll.text.trim(),
+      'email': _email.text.trim(),
+      'department': _dept.text.trim(),
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+    _show("Inserted");
+    _clear();
+  }
+
+  /// UPDATE (using docId)
+  Future<void> _update() async {
+    if (_editingDocId == null) {
+      _show("Select a student from list first");
+      return;
+    }
+    await FirebaseFirestore.instance
+        .collection('students')
+        .doc(_editingDocId)
+        .update({
+      'name': _name.text.trim(),
+      'roll': _roll.text.trim(),
+      'email': _email.text.trim(),
+      'department': _dept.text.trim(),
+    });
+    _show("Updated");
+    _clear();
+  }
+
+  /// DELETE (using docId)
+  Future<void> _delete() async {
+    if (_editingDocId == null) {
+      _show("Select a student from list first");
+      return;
+    }
+    await FirebaseFirestore.instance
+        .collection('students')
+        .doc(_editingDocId)
+        .delete();
+    _show("Deleted");
+    _clear();
+  }
+
+  void _clear() {
+    _formKey.currentState?.reset();
+    _name.clear();
+    _roll.clear();
+    _email.clear();
+    _dept.clear();
+    setState(() => _editingDocId = null);
+  }
+
+  void _show(String m) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
+
+  void _loadStudent(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    _name.text = data['name'] ?? '';
+    _roll.text = data['roll'] ?? '';
+    _email.text = data['email'] ?? '';
+    _dept.text = data['department'] ?? '';
+    setState(() => _editingDocId = doc.id);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Student Form')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  TextFormField(
+                    controller: _name,
+                    decoration: const InputDecoration(labelText: 'Name'),
+                    validator: (v) =>
+                    v == null || v.trim().isEmpty ? 'Enter name' : null,
+                  ),
+                  TextFormField(
+                    controller: _roll,
+                    decoration: const InputDecoration(labelText: 'Roll Number'),
+                    validator: (v) => v == null || v.trim().isEmpty
+                        ? 'Enter roll number'
+                        : null,
+                  ),
+                  TextFormField(
+                    controller: _email,
+                    decoration: const InputDecoration(labelText: 'Email'),
+                  ),
+                  TextFormField(
+                    controller: _dept,
+                    decoration: const InputDecoration(labelText: 'Department'),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      ElevatedButton(
+                          onPressed: _insert, child: const Text("Insert")),
+                      ElevatedButton(
+                          onPressed: _update, child: const Text("Update")),
+                      ElevatedButton(
+                          onPressed: _delete, child: const Text("Delete")),
+                      ElevatedButton(
+                          onPressed: _clear, child: const Text("Clear")),
+                    ],
+                  )
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Tap a student below to edit:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('students')
+                    .orderBy('createdAt', descending: true)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  }
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  final docs = snapshot.data!.docs;
+                  if (docs.isEmpty) {
+                    return const Center(child: Text('No students yet'));
+                  }
+                  return ListView.builder(
+                    itemCount: docs.length,
+                    itemBuilder: (context, i) {
+                      final data =
+                      docs[i].data() as Map<String, dynamic>;
+                      return ListTile(
+                        title: Text(data['name'] ?? '—'),
+                        subtitle: Text(
+                            '${data['roll'] ?? ''} • ${data['department'] ?? ''}'),
+                        trailing: Text(data['email'] ?? ''),
+                        onTap: () => _loadStudent(docs[i]),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class StudentListPage extends StatelessWidget {
+  const StudentListPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("All Students")),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('students')
+            .orderBy('createdAt', descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final docs = snapshot.data!.docs;
+          if (docs.isEmpty) {
+            return const Center(child: Text('No students yet'));
+          }
+          return ListView.builder(
+            itemCount: docs.length,
+            itemBuilder: (context, i) {
+              final data = docs[i].data() as Map<String, dynamic>;
+              return ListTile(
+                title: Text(data['name'] ?? '—'),
+                subtitle:
+                Text('${data['roll'] ?? ''} • ${data['department'] ?? ''}'),
+                trailing: Text(data['email'] ?? ''),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
