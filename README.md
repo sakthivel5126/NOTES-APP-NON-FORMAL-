@@ -4,3 +4,5 @@ this is an notes app cretaed using dart language using android studio,for backen
 ![fornt1](https://github.com/user-attachments/assets/9a08ec10-e2df-4410-8a66-2bc16d9aadc8)
 ![add notes section](https://github.com/user-attachments/assets/d0deca58-be5c-461d-a4da-7186a64714c5)
 ![view](https://github.com/user-attachments/assets/51f44caa-1bc3-46a5-bb8b-c5c06b42dedf)
+<img width="1813" height="906" alt="image" src="https://github.com/user-attachments/assets/06b32be9-9684-41b0-850c-34ef18e3a05a" />
+
